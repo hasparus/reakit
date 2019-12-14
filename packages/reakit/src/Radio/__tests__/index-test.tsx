@@ -1,5 +1,9 @@
+import * as ts from "typescript";
+import { readFileSync } from "fs";
+import * as path from "path";
 import * as React from "react";
 import { render, click } from "reakit-test-utils";
+import { expecter } from "ts-snippet";
 import { Radio, RadioGroup, useRadioState } from "..";
 
 test("click on radio", () => {
@@ -82,18 +86,17 @@ test("onChange non-native radio", () => {
 
 test("group", () => {
   const Test = () => {
-    type Superhero = "superman" | "batman";
-    const radio = useRadioState<Superhero>({ state: "superman" });
-
+    const radio = useRadioState();
     return (
-      <RadioGroup {...radio} aria-label="superhero">
+      <RadioGroup {...radio} aria-label="radiogroup" id="base">
         <label>
-          <Radio<Superhero> {...radio} id="base-1" value="superman" />
-          Clark Kent
+          <Radio {...radio} value="a" />a
         </label>
         <label>
-          <Radio {...radio} id="base-2" value="batman" />
-          Bruce Wayne
+          <Radio {...radio} value="b" />b
+        </label>
+        <label>
+          <Radio {...radio} value="c" />c
         </label>
       </RadioGroup>
     );
@@ -102,20 +105,20 @@ test("group", () => {
   expect(container).toMatchInlineSnapshot(`
     <div>
       <fieldset
-        aria-label="superhero"
+        aria-label="radiogroup"
+        id="base"
         role="radiogroup"
       >
         <label>
           <input
-            aria-checked="true"
-            checked=""
+            aria-checked="false"
             id="base-1"
             role="radio"
             tabindex="0"
             type="radio"
-            value="superman"
+            value="a"
           />
-          Clark Kent
+          a
         </label>
         <label>
           <input
@@ -124,11 +127,70 @@ test("group", () => {
             role="radio"
             tabindex="-1"
             type="radio"
-            value="batman"
+            value="b"
           />
-          Bruce Wayne
+          b
+        </label>
+        <label>
+          <input
+            aria-checked="false"
+            id="base-3"
+            role="radio"
+            tabindex="-1"
+            type="radio"
+            value="c"
+          />
+          c
         </label>
       </fieldset>
     </div>
   `);
+});
+
+test("radio state types", () => {
+  const expectSnippet = expecter(
+    code => `
+    import { useRadioState } from 'packages/reakit/src/Radio';
+    ${code}
+  `,
+    // this is needed due to tsconfig path mapping to other reakit packages
+    ts.parseConfigFileTextToJson(
+      "tsconfig.json",
+      readFileSync(path.resolve(__dirname, "../../../../../tsconfig.json"), {
+        encoding: "utf8"
+      })
+    ).config.compilerOptions,
+    path.resolve(__dirname, "../../../../..")
+  );
+
+  expectSnippet(`
+    enum Flavor {
+      Vanilla = "vanilla",
+      Chocolate = "chocolate"
+    }
+    
+    const { state } = useRadioState({ state: Flavor.Chocolate });
+  `).toSucceed();
+
+  expectSnippet(`
+    enum Flavor {
+      Vanilla = "vanilla",
+      Chocolate = "chocolate"
+    }
+    
+    const { state } = useRadioState({ state: Flavor.Chocolate });
+    const _ = <Radio {...radioState} value="Tomato" />
+  `).toFail();
+
+  expectSnippet(`
+    import { Radio } from './packages/reakit/src/Radio';
+
+    enum Flavor {
+      Vanilla = "vanilla",
+      Chocolate = "chocolate"
+    }
+    
+    const { state } = useRadioState({ state: Flavor.Chocolate });
+    const _ = <Radio {...radioState} value={Flavor.Vanilla} />
+  `).toFail();
 });
