@@ -179,6 +179,15 @@ test("radio state types", () => {
     }
     
     const { state } = useRadioState({ state: Flavor.Chocolate });
+  `).toInfer("state", "Flavor | undefined");
+
+  expectSnippet(`
+    enum Flavor {
+      Vanilla = "vanilla",
+      Chocolate = "chocolate"
+    }
+    
+    const { state } = useRadioState({ state: Flavor.Chocolate });
     const _ = <Radio {...radioState} value="Tomato" />
   `).toFail();
 
